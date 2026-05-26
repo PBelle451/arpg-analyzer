@@ -142,3 +142,60 @@ def ver_tendencias(db: Session = Depends(get_db)):
     anterior = [{"classe": s.classe, "popularidade_pct": s.popularidade_pct} for s in todos if s.rodada == rodada_anterior]
 
     return calcular_tendencias(hoje, anterior)
+
+@app.get("/recomendar")
+def recomendar(
+    playstyle: str = "allrounder",
+    classe: str = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(Build)
+
+    if classe:
+        query = query.filter(Build.classe == classe)
+
+    builds = query.all()
+
+    if not builds:
+        return {"erro": "Nenhuma build encontrada"}
+
+    # Pesos por playstyle
+    pesos = {
+        "clearspeed": {"popularidade": 0.7, "hc": 0.0},
+        "bossing":    {"popularidade": 0.4, "hc": 0.0},
+        "hardcore":   {"popularidade": 0.3, "hc": 0.7},
+        "allrounder": {"popularidade": 0.5, "hc": 0.5},
+    }
+
+    w = pesos.get(playstyle, pesos["allrounder"])
+    max_pop = max(b.popularidade for b in builds)
+
+    resultado = []
+    for b in builds:
+        score = (
+            (b.popularidade / max_pop) * w["popularidade"] * 100 +
+            (1.0 if b.hc_viable else 0.0) * w["hc"] * 100
+        )
+        motivos = []
+        if b.popularidade >= max_pop * 0.8:
+            motivos.append("Alta popularidade no meta")
+        if b.hc_viable and playstyle == "hardcore":
+            motivos.append("Viável em Hardcore")
+        if playstyle == "clearspeed" and b.popularidade >= max_pop * 0.7:
+            motivos.append("Boa para farm de mapas")
+        if playstyle == "bossing":
+            motivos.append("Considerada para bossing")
+
+        resultado.append({
+            "nome": b.nome,
+            "classe": b.classe,
+            "ascendancy": b.ascendancy,
+            "main_skill": b.main_skill,
+            "score": round(score, 1),
+            "motivos": motivos,
+            "hc_viable": b.hc_viable,
+            "popularidade": b.popularidade,
+        })
+
+    resultado.sort(key=lambda x: x["score"], reverse=True)
+    return resultado[:5]

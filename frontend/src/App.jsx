@@ -2,8 +2,9 @@ import { useState } from 'react'
 import Meta from './pages/Meta'
 import Builds from './pages/Builds'
 import Tendencias from './pages/Tendencias'
+import Recomendar from './pages/Recomendar'
 
-const abas = ['Meta', 'Builds', 'Tendências']
+const abas = ['Meta', 'Builds', 'Tendências', 'Recomendar']
 
 export default function App() {
   const [aba, setAba] = useState('Meta')
@@ -35,6 +36,7 @@ export default function App() {
       {aba === 'Meta'       && <Meta />}
       {aba === 'Builds'     && <Builds />}
       {aba === 'Tendências' && <Tendencias />}
+      {aba === 'Recomendar' && <Recomendar />}
     </div>
   )
 }
