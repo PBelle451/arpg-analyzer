@@ -2,22 +2,27 @@ import { useState } from 'react'
 import axios from 'axios'
 
 const PLAYSTYLES = [
-  { id: 'allrounder', label: '⚖️ All-Rounder', desc: 'Equilíbrio entre tudo' },
-  { id: 'clearspeed', label: '⚡ Clear Speed', desc: 'Farm rápido de mapas' },
-  { id: 'bossing',    label: '💀 Bossing',     desc: 'Matar bosses difíceis' },
-  { id: 'hardcore',   label: '🛡 Hardcore',    desc: 'Sobrevivência acima de tudo' },
+  { id: 'allrounder', icon: '⚖️', label: 'All-Rounder',  desc: 'Equilíbrio entre tudo' },
+  { id: 'clearspeed', icon: '⚡', label: 'Clear Speed',  desc: 'Farm rápido de mapas' },
+  { id: 'bossing',    icon: '💀', label: 'Bossing',      desc: 'Matar bosses difíceis' },
+  { id: 'hardcore',   icon: '🛡', label: 'Hardcore',     desc: 'Sobrevivência acima de tudo' },
 ]
 
 const CLASSES = ['', 'Witch', 'Ranger', 'Monk', 'Warrior', 'Sorceress', 'Mercenary']
+
+const COR_SCORE = s => s >= 70 ? 'text-green-400' : s >= 40 ? 'text-yellow-400' : 'text-red-400'
+const BG_SCORE  = s => s >= 70 ? 'bg-green-500'  : s >= 40 ? 'bg-yellow-500'  : 'bg-red-500'
 
 export default function Recomendar() {
   const [playstyle, setPlaystyle] = useState('allrounder')
   const [classe, setClasse] = useState('')
   const [resultado, setResultado] = useState([])
   const [carregando, setCarregando] = useState(false)
+  const [buscou, setBuscou] = useState(false)
 
   function buscar() {
     setCarregando(true)
+    setBuscou(true)
     const params = { playstyle }
     if (classe) params.classe = classe
     axios.get('http://127.0.0.1:8000/recomendar', { params })
@@ -25,106 +30,112 @@ export default function Recomendar() {
       .finally(() => setCarregando(false))
   }
 
-  const corScore = s => s >= 70 ? '#27ae60' : s >= 40 ? '#f39c12' : '#c0392b'
-
   return (
-    <div>
-      <h2>Recomendar Build</h2>
-
-      <h3 style={{ color: '#888', fontWeight: 'normal' }}>Como você quer jogar?</h3>
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-        {PLAYSTYLES.map(p => (
-          <div
-            key={p.id}
-            onClick={() => setPlaystyle(p.id)}
-            style={{
-              border: `2px solid ${playstyle === p.id ? '#c0392b' : '#ddd'}`,
-              borderRadius: 8,
-              padding: '12px 16px',
-              cursor: 'pointer',
-              background: playstyle === p.id ? '#fff5f5' : 'white',
-              minWidth: 130,
-            }}
-          >
-            <div style={{ fontWeight: 'bold', marginBottom: 4 }}>{p.label}</div>
-            <div style={{ fontSize: 12, color: '#888' }}>{p.desc}</div>
-          </div>
-        ))}
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-xl font-semibold text-white mb-1">Recomendar Build</h2>
+        <p className="text-sm text-gray-400">Encontre a build ideal para o seu estilo de jogo</p>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-        <select
-          value={classe}
-          onChange={e => setClasse(e.target.value)}
-          style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #ddd', fontSize: 14 }}
-        >
-          {CLASSES.map(c => (
-            <option key={c} value={c}>{c || 'Qualquer classe'}</option>
+      {/* Playstyle */}
+      <div>
+        <p className="text-sm text-gray-400 mb-3">Como você quer jogar?</p>
+        <div className="grid grid-cols-4 gap-3">
+          {PLAYSTYLES.map(p => (
+            <button
+              key={p.id}
+              onClick={() => setPlaystyle(p.id)}
+              className={`rounded-xl p-4 border text-left transition-all ${
+                playstyle === p.id
+                  ? 'border-red-500 bg-red-500/10'
+                  : 'border-gray-700 bg-gray-800 hover:border-gray-500'
+              }`}
+            >
+              <div className="text-2xl mb-2">{p.icon}</div>
+              <div className="font-medium text-white text-sm">{p.label}</div>
+              <div className="text-xs text-gray-400 mt-1">{p.desc}</div>
+            </button>
           ))}
-        </select>
+        </div>
+      </div>
+
+      {/* Classe + botão */}
+      <div className="flex gap-3 items-end">
+        <div>
+          <p className="text-sm text-gray-400 mb-2">Classe preferida</p>
+          <select
+            value={classe}
+            onChange={e => setClasse(e.target.value)}
+            className="bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-red-500"
+          >
+            {CLASSES.map(c => <option key={c} value={c}>{c || 'Qualquer classe'}</option>)}
+          </select>
+        </div>
 
         <button
           onClick={buscar}
-          style={{
-            padding: '8px 24px',
-            background: '#c0392b',
-            color: 'white',
-            border: 'none',
-            borderRadius: 6,
-            cursor: 'pointer',
-            fontWeight: 'bold',
-            fontSize: 14,
-          }}
+          className="px-8 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg transition-colors"
         >
-          {carregando ? 'Buscando...' : 'Recomendar →'}
+          {carregando ? 'Analisando...' : 'Recomendar →'}
         </button>
       </div>
 
-      {resultado.map((r, i) => (
-        <div
-          key={i}
-          style={{
-            border: `1px solid ${i === 0 ? '#c0392b' : '#eee'}`,
-            borderRadius: 8,
-            padding: 16,
-            marginBottom: 12,
-            background: i === 0 ? '#fff5f5' : 'white',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              {i === 0 && (
-                <span style={{ background: '#c0392b', color: 'white', fontSize: 11, padding: '2px 8px', borderRadius: 10, marginBottom: 6, display: 'inline-block' }}>
-                  Melhor match
-                </span>
-              )}
-              <div style={{ fontWeight: 'bold', fontSize: 16 }}>{r.nome}</div>
-              <div style={{ color: '#888', fontSize: 13, marginTop: 2 }}>
-                {r.classe} · {r.ascendancy} · {r.main_skill}
+      {/* Resultados */}
+      {buscou && !carregando && resultado.length === 0 && (
+        <div className="bg-gray-800 border border-gray-700 rounded-xl px-5 py-8 text-center text-gray-400">
+          Nenhuma build encontrada com esses filtros.
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {resultado.map((r, i) => (
+          <div
+            key={i}
+            className={`rounded-xl border p-5 transition-all ${
+              i === 0
+                ? 'border-red-500 bg-red-500/5'
+                : 'border-gray-700 bg-gray-800'
+            }`}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                {i === 0 && (
+                  <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded-full font-medium mb-2 inline-block">
+                    ⭐ Melhor match
+                  </span>
+                )}
+                <h3 className="text-white font-bold text-lg">{r.nome}</h3>
+                <p className="text-gray-400 text-sm mt-0.5">
+                  {r.classe} · {r.ascendancy} · {r.main_skill}
+                </p>
+              </div>
+
+              <div className="text-right">
+                <div className={`text-3xl font-bold ${COR_SCORE(r.score)}`}>{r.score}</div>
+                <div className="text-xs text-gray-500">score</div>
+                <div className="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden mt-1">
+                  <div className={`h-full rounded-full ${BG_SCORE(r.score)}`} style={{ width: `${r.score}%` }} />
+                </div>
               </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 28, fontWeight: 'bold', color: corScore(r.score) }}>{r.score}</div>
-              <div style={{ fontSize: 11, color: '#888' }}>score</div>
+
+            {r.motivos.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {r.motivos.map((m, j) => (
+                  <span key={j} className="text-xs bg-green-900 text-green-300 border border-green-700 px-3 py-0.5 rounded-full">
+                    ✓ {m}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-4 text-sm text-gray-400">
+              <span>Popularidade: <strong className="text-white">{r.popularidade}</strong></span>
+              {r.hc_viable && <span className="text-green-400 font-medium">🛡 HC Viable</span>}
             </div>
           </div>
-
-          {r.motivos.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-              {r.motivos.map((m, j) => (
-                <span key={j} style={{ background: '#e8f5e9', color: '#27ae60', fontSize: 12, padding: '3px 10px', borderRadius: 10 }}>
-                  ✓ {m}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: 13, color: '#888' }}>
-            <span>Popularidade: <strong style={{ color: '#333' }}>{r.popularidade}</strong></span>
-            {r.hc_viable && <span style={{ color: '#27ae60' }}>🛡 HC Viable</span>}
-          </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }

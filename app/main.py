@@ -9,6 +9,8 @@ from app.models import MetaSnapshot
 from app.analise import calcular_tendencias
 from datetime import datetime, timedelta
 import pandas as pd
+from apscheduler.schedulers.background import BackgroundScheduler
+from app.database import SessionLocal
 app = FastAPI()
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,6 +20,38 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Função de agendamento para salvar snapshots automáticos de
+def job_snapshot():
+    db = SessionLocal()
+    try:
+        builds = db.query(Build).all()
+        if not builds:
+            return
+
+        import pandas as pd
+        dados = [{"classe": b.classe, "popularidade": b.popularidade} for b in builds]
+        df = pd.DataFrame(dados)
+        df = df[df["classe"] != "string"]
+
+        total = df["popularidade"].sum()
+        dist = (df.groupby("classe")["popularidade"].sum() / total * 100).round(1)
+
+        ultima = db.query(MetaSnapshot).order_by(MetaSnapshot.rodada.desc()).first()
+        proxima_rodada = (ultima.rodada + 1) if ultima else 1
+
+        for classe, pct in dist.items():
+            snap = MetaSnapshot(classe=classe, popularidade_pct=pct, rodada=proxima_rodada)
+            db.add(snap)
+        db.commit()
+        print(f"✅ Snapshot automático salvo — rodada {proxima_rodada}")
+    finally:
+        db.close()
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(job_snapshot, "interval", hours=1)
+scheduler.start()
+
 # Schema de entrada — valida o que chega na requisição
 class BuildIn(BaseModel):
     nome: str
